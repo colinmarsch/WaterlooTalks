@@ -72,6 +72,7 @@ bot.dialog('/counsel', [
   function (session) {
     session.send("You can contact Waterloo Health Services at 519-888-4096 or you can visit https://uwaterloo.ca/health-services/mental-health-services for more info");
     session.send("Alternatively, the Delton Glebe Counselling Centre is near campus and can be reached at 519-884-3305 or at http://glebecounselling.ca/");
+    session.send("I'm so glad you talked to me about this. Remember, being aware of how you're feeling is a huge first step. Keep going and don't give up, you got this!");
     session.endDialog();
   }
 ]);
@@ -85,10 +86,18 @@ bot.dialog('/feeling',
       .send({ "documents": [{ "language": "en", "id": "bot", "text": res }] })
       .end(function (response) {
         if (Number(res) != res) {
-          if (response.body['documents'][0]['score'] < 0.4) {
-            session.beginDialog('/promptSad');
-          } else {
-            session.beginDialog('/promptHappy');
+          //session.send(res);
+          if (res === "Academic" || res === "Coop" || res === "Finance" || res === "Social Life" || res === "Relationship") {
+            session.beginDialog('/causes2');
+          } else if (res === "Sad" || res === "Tired" || res === "Angry" || res === "Scared" || res === "Anxious") {
+            session.beginDialog('/sadEmotions2');
+          }
+          else {
+            if (response.body['documents'][0]['score'] < 0.4) {
+              session.beginDialog('/promptSad');
+            } else {
+              session.beginDialog('/promptHappy');
+            }
           }
         } else {
           session.beginDialog('/sadEmotions2');
@@ -127,61 +136,71 @@ bot.dialog('/promptHappy', [
 
 bot.dialog('/happyEnding', [
   function (session) {
-    session.send("Happy to hear that! I will always be here if you need me");
+    var msg = new builder.Message(session);
+    msg.addAttachment(
+        new builder.AnimationCard(session)
+            .media([{ profile: 'GIF test',
+                  url: 'https://media.giphy.com/media/11sBLVxNs7v6WA/giphy.gif'
+        }]));
+    session.send(msg);
+    session.send("Happy to hear that! I will always be here if you need me :)");
     session.endDialog();
   }
 ]);
 
 bot.dialog('/sadEmotions',
   function (session) {
-    session.send("1 - Sad");
-    session.send("2 - Tired");
-    session.send("3 - Angry");
-    session.send("4 - Scared");
-    session.send("5 - Anxious");
-    builder.Prompts.number(session, "Which feeling best describes you right now? Please enter the corresponding number.");
+    builder.Prompts.choice(session, "Could you tell me which word best describes you right now?", ["Sad", "Tired", "Angry", "Scared", "Anxious"]);
   });
 
 bot.dialog('/sadEmotions2',
   function (session) {
     var res = session.message.text;
-    if (res == 1) {
-      session.send("I'm sorry to hear that. Please know that you're not alone in this world, and that there are many people who care about you and love you very much. I am not fully equipped to help you yet, sorry. If it's an emergency, please contact 911 or your local authorities. I also encourage you to contact a trained mental health professional who will be able to help you better than I can. Hang in there");
+    if (res == "Sad") {
+      session.send("I'm sorry to hear that. Please know that you're not alone in this world, and that there are many people who care about you and love you very much. I am not fully equipped to help you yet, sorry. If it's an emergency, please contact 911 or your local authorities. I also encourage you to contact a trained mental health professional who will be able to help you better than I can. Hang in there!!");
+      session.send("Please visit https://uwaterloo.ca/health-services/mental-health-services if you would like more info");
       session.beginDialog('/causes');
-    } else if (res == 2) {
-      session.send("Hey, hang in there. We all have times when we just want to call it a quit, but one will only grow through hardship. You will come out of this stronger, so don't give up!");
+    } else if (res == "Tired") {
+      session.send("Hey, hang in there. We all have times when we just want to call it a quit, but one will only grow through hardship. You will come out of this stronger, so don't give up! Check out this video if you want some more motivation!");
+      session.send("https://www.youtube.com/watch?v=UNQhuFL6CWg");
       session.beginDialog('/causes');
-    } else if (res == 3) {
-      session.send("Take a deep breath, and try to stop thinking about whatever is bothering you. We all feel angry sometimes, but it is important to deal with your anger in a healthy way. Perhaps you can go take a walk outside, and try to clear your head.");
+    } else if (res == "Angry") {
+      session.send("Take a deep breath, and try to stop thinking about whatever is bothering you. We all feel angry sometimes, but it is important to deal with your anger in a healthy way. Perhaps you can go take a walk outside, and try to clear your head. Or even better, let the music soothe your anger: https://www.youtube.com/watch?v=KisPGQFxMiw");
       session.beginDialog('/causes');
-    } else if (res == 4) {
+    } else if (res == "Scared") {
       session.send("We all feel scared sometimes, so you are definitely not alone! Try to take your mind off of what is scaring you, and collect your thoughts. Persevere, and the fear will dissolve.");
       session.beginDialog('/causes');
-    } else if (res == 5) {
-      session.send("Hey, it's perfectly fine to feel anxious sometimes. Try to take a deep breath, and take your mind off of whatever is making you anxious. Try your best to prepare for whatever you are anxious about, and you will be fine. Hang in there!");
+    } else if (res == "Anxious") {
+      session.send("Hey, it's perfectly fine to feel anxious sometimes. Try to take a deep breath, and take your mind off of whatever is making you anxious. Try your best to prepare for whatever you are anxious about, and you will be fine. Hang in there! If you are still worried, this guide will make you a pro at it: https://www.youtube.com/watch?v=k5RH3BdXDOY&feature=youtu.be");
       session.beginDialog('/causes');
     }
     session.endDialog();
   }
 );
 
-bot.dialog('/causes', [
+bot.dialog('/causes',
   function (session) {
-    builder.Prompts.choice(session, "Could you tell me what is causing you to feel this way?", ["Academic", "Coop", "Finance", "Social Life"]);
-  },
-  function (session, results) {
-    if (results.response.entity === "Academic") {
+    builder.Prompts.choice(session, "Could you tell me what is causing you to feel this way?", ["Academic", "Coop", "Finance", "Social Life", "Relationship"]);
+  });
+
+bot.dialog('/causes2',
+  function (session) {
+    var res = session.message.text;
+    if (res === "Academic") {
       session.send("If you are struggling with academics, it may be a great idea to see an academic advisor, as they can help you get through your problems. You can get more info here: https://uwaterloo.ca/registrar/current-students/advisors");
-    } else if (results.response.entity === "Coop") {
+    } else if (res === "Coop") {
       session.send("Don't stress, finding a job is a difficult process for everyone. Be patient and keep on applying to jobs, and look for ways to improve your employable skills. If you are still concerned, check out https://uwaterloo.ca/co-operative-education/ for more information");
-    } else if (results.response.entity === "Finance") {
+    } else if (res === "Finance") {
       session.send("There are government fundings, scholarships, and bursaries you can apply to, check out https://www.ontario.ca/page/osap-ontario-student-assistance-program and https://uwaterloo.ca/find-out-more/financing/scholarships for more details.");
-    } else if (results.response.entity === "Social Life") {
-      session.send("It's never too late to make new friends! Try joining some clubs you're interested in, talking to classmates, and attending campus events. Get out there and be a social butterfly!");
+    } else if (res === "Social Life") {
+      session.send("It's never too late to make new friends! Try joining some clubs you're interested in, talking to classmates, and attending campus events. Here is a list of all the clubs at UW, take a look, there's gotta be one for you! http://www.feds.ca/clubs-section/clubs-listing/ Get out there and be a social butterfly! :)");
+    } else if (res === "Relationship") {
+      session.send("Hang in there, relationships aren't easy. Just remember that things happen for a reason, and that everything will be okay given time. Surprisingly, Reddit gives some pretty good advice so check out https://www.reddit.com/r/relationship_advice/ :)");
     }
+    session.send("Thanks for talking to me about this. If there is anything else that you want to talk about let me know anytime!")
     session.endDialog();
   }
-]);
+);
 
 bot.dialog('/numbers', [
   function (session) {
@@ -199,7 +218,7 @@ if (useEmulator) {
   var restify = require('restify');
   var server = restify.createServer();
   server.listen(3978, function () {
-    console.log('test bot endpont at http://localhost:3978/api/messages');
+    console.log('test bot endpoint at http://localhost:3978/api/messages');
   });
   server.post('/api/messages', connector.listen());
 } else {
